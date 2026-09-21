@@ -11,6 +11,11 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import org.springframework.web.client.RestClient;
+
+import java.util.List;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 public class EmailService {
@@ -22,13 +27,96 @@ public class EmailService {
     @Value("${spring.mail.username:}")
     private String senderEmail;
 
+    @Value("${brevo.api.key:}")
+    private String brevoApiKey;
+
+    @Value("${resend.api.key:}")
+    private String resendApiKey;
+
+    @Value("${resend.from.email:AgriMitra <onboarding@resend.dev>}")
+    private String resendFromEmail;
+
     public void sendOtpEmail(String recipientEmail, String recipientName, String otp) {
-        // Prominently log to console for server logs
         logOtpBanner(recipientEmail, otp);
 
+        // 1. If Brevo HTTP API is configured, use it (bypasses Render's SMTP port block via port 443)
+        if (brevoApiKey != null && !brevoApiKey.trim().isEmpty() && !brevoApiKey.contains("your_brevo_key")) {
+            sendViaBrevoApi(recipientEmail, recipientName, otp);
+            return;
+        }
+
+        // 2. If Resend HTTP API is configured, use it (bypasses Render's SMTP port block via port 443)
+        if (resendApiKey != null && !resendApiKey.trim().isEmpty() && !resendApiKey.contains("your_resend_key")) {
+            sendViaResendApi(recipientEmail, recipientName, otp);
+            return;
+        }
+
+        // 3. Fallback to standard SMTP
+        sendViaSmtp(recipientEmail, recipientName, otp);
+    }
+
+    private void sendViaBrevoApi(String recipientEmail, String recipientName, String otp) {
+        try {
+            logger.info("Dispatching OTP email to {} via Brevo HTTPS API...", recipientEmail);
+            String htmlMsg = buildOtpEmailTemplate(recipientName, otp);
+            String from = (senderEmail != null && !senderEmail.isBlank() && !senderEmail.contains("your_email"))
+                    ? senderEmail : "support@agrimitra.com";
+
+            Map<String, Object> payload = Map.of(
+                    "sender", Map.of("name", "AgriMitra", "email", from),
+                    "to", List.of(Map.of("email", recipientEmail, "name", recipientName != null ? recipientName : "Farmer")),
+                    "subject", "AgriMitra - Password Recovery OTP Code",
+                    "htmlContent", htmlMsg
+            );
+
+            RestClient.create()
+                    .post()
+                    .uri("https://api.brevo.com/v3/smtp/email")
+                    .header("api-key", brevoApiKey.trim())
+                    .header("Content-Type", "application/json")
+                    .body(payload)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            logger.info("OTP email successfully dispatched via Brevo API to {}", recipientEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send OTP email via Brevo API: {}", e.getMessage(), e);
+            throw new ApiException("Failed to send email via Brevo API: " + e.getMessage());
+        }
+    }
+
+    private void sendViaResendApi(String recipientEmail, String recipientName, String otp) {
+        try {
+            logger.info("Dispatching OTP email to {} via Resend HTTPS API...", recipientEmail);
+            String htmlMsg = buildOtpEmailTemplate(recipientName, otp);
+
+            Map<String, Object> payload = Map.of(
+                    "from", resendFromEmail != null ? resendFromEmail : "AgriMitra <onboarding@resend.dev>",
+                    "to", List.of(recipientEmail),
+                    "subject", "AgriMitra - Password Recovery OTP Code",
+                    "html", htmlMsg
+            );
+
+            RestClient.create()
+                    .post()
+                    .uri("https://api.resend.com/emails")
+                    .header("Authorization", "Bearer " + resendApiKey.trim())
+                    .header("Content-Type", "application/json")
+                    .body(payload)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            logger.info("OTP email successfully dispatched via Resend API to {}", recipientEmail);
+        } catch (Exception e) {
+            logger.error("Failed to send OTP email via Resend API: {}", e.getMessage(), e);
+            throw new ApiException("Failed to send email via Resend API: " + e.getMessage());
+        }
+    }
+
+    private void sendViaSmtp(String recipientEmail, String recipientName, String otp) {
         if (senderEmail == null || senderEmail.trim().isEmpty() || senderEmail.contains("your_email") || senderEmail.equals("${MAIL_USERNAME:}")) {
             logger.error("SMTP email not configured (MAIL_USERNAME is empty or placeholder). Cannot dispatch email.");
-            throw new ApiException("Email service is currently not configured on the server. Please check SMTP settings.");
+            throw new ApiException("Email service is currently not configured on the server. Please set MAIL_USERNAME/MAIL_PASSWORD or use BREVO_API_KEY.");
         }
 
         try {
@@ -43,10 +131,14 @@ public class EmailService {
             helper.setFrom(senderEmail);
 
             mailSender.send(mimeMessage);
-            logger.info("OTP email successfully dispatched to {}", recipientEmail);
+            logger.info("OTP email successfully dispatched via SMTP to {}", recipientEmail);
         } catch (MessagingException | RuntimeException e) {
             logger.error("Could not dispatch email via SMTP: {}", e.getMessage(), e);
-            throw new ApiException("Failed to send OTP email: " + e.getMessage());
+            String msg = e.getMessage();
+            if (msg != null && (msg.contains("SocketTimeoutException") || msg.contains("Connect timed out") || msg.contains("timeout"))) {
+                throw new ApiException("Render Free Tier blocks outbound SMTP ports (25, 465, 587). Please configure BREVO_API_KEY (port 443) on Render, or upgrade Render to a paid plan.");
+            }
+            throw new ApiException("Failed to send OTP email: " + msg);
         }
     }
 
