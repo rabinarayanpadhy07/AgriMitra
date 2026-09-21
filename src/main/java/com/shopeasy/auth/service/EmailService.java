@@ -18,12 +18,17 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:}")
     private String senderEmail;
 
-    public void sendOtpEmail(String recipientEmail, String recipientName, String otp) {
+    public boolean sendOtpEmail(String recipientEmail, String recipientName, String otp) {
         // Prominently log to console for instant developer verification
         logOtpBanner(recipientEmail, otp);
+
+        if (senderEmail == null || senderEmail.trim().isEmpty() || senderEmail.contains("your_email") || senderEmail.equals("${MAIL_USERNAME:}")) {
+            logger.warn("SMTP email not configured (MAIL_USERNAME is empty or placeholder). Console OTP: {}", otp);
+            return false;
+        }
 
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
@@ -38,9 +43,10 @@ public class EmailService {
 
             mailSender.send(mimeMessage);
             logger.info("OTP email successfully dispatched to {}", recipientEmail);
+            return true;
         } catch (MessagingException | RuntimeException e) {
             logger.warn("Could not dispatch email via SMTP (using fallback console display): {}", e.getMessage());
-            // We do not rethrow because the OTP is logged to console for testing/development
+            return false;
         }
     }
 

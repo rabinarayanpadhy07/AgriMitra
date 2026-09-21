@@ -40,8 +40,14 @@ public class AuthController {
     }
 
     @PostMapping({"/api/auth/forgot-password", "/forgot-password"})
-    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        authService.forgotPassword(request);
+    public ResponseEntity<ApiResponse<java.util.Map<String, String>>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        String fallbackOtp = authService.forgotPassword(request);
+        if (fallbackOtp != null) {
+            return ResponseEntity.ok(ApiResponse.success(
+                    "OTP generated successfully. (Note: Email SMTP not configured on server; your OTP is: " + fallbackOtp + ")",
+                    java.util.Collections.singletonMap("otp", fallbackOtp)
+            ));
+        }
         return ResponseEntity.ok(ApiResponse.success("If an account exists with this email or mobile, an OTP has been sent."));
     }
 
