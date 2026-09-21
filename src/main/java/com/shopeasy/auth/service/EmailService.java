@@ -33,7 +33,7 @@ public class EmailService {
 
             helper.setText(htmlMsg, true);
             helper.setTo(recipientEmail);
-            helper.setSubject("ShopEasy - Password Recovery OTP Code");
+            helper.setSubject("AgriMitra - Password Recovery OTP Code");
             helper.setFrom(senderEmail);
 
             mailSender.send(mimeMessage);
@@ -46,7 +46,7 @@ public class EmailService {
 
     private void logOtpBanner(String recipientEmail, String otp) {
         String border = "==========================================================";
-        logger.info("\n{}\n  [SHOPEASY OTP DISPATCH]\n  Recipient: {}\n  Verification OTP Code: {}\n  Valid for: 10 minutes\n{}",
+        logger.info("\n{}\n  [AGRIMITRA OTP DISPATCH]\n  Recipient: {}\n  Verification OTP Code: {}\n  Valid for: 10 minutes\n{}",
                 border, recipientEmail, otp, border);
     }
 
@@ -56,29 +56,29 @@ public class EmailService {
                 <html>
                 <head>
                     <style>
-                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
-                        .container { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-                        .header { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 24px; text-align: center; }
-                        .content { padding: 30px 24px; color: #334155; line-height: 1.6; }
-                        .otp-box { font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4f46e5; text-align: center; background: #eef2ff; padding: 18px; border-radius: 8px; margin: 24px 0; border: 1px dashed #6366f1; }
-                        .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; }
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4fdf7; margin: 0; padding: 20px; }
+                        .container { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(5,150,105,0.1); border: 1px solid #d1fae5; }
+                        .header { background: linear-gradient(135deg, #065f46, #16a34a); color: white; padding: 26px 24px; text-align: center; }
+                        .content { padding: 30px 24px; color: #1e293b; line-height: 1.6; }
+                        .otp-box { font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #065f46; text-align: center; background: #ecfdf5; padding: 18px; border-radius: 8px; margin: 24px 0; border: 1.5px dashed #059669; }
+                        .footer { background: #f0fdf4; padding: 16px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #dcfce7; }
                     </style>
                 </head>
                 <body>
                     <div class="container">
                         <div class="header">
-                            <h1 style="margin:0; font-size: 24px;">ShopEasy E-Commerce</h1>
-                            <p style="margin:5px 0 0 0; opacity: 0.9;">Secure Password Recovery</p>
+                            <h1 style="margin:0; font-size: 24px; font-weight: bold; letter-spacing: -0.5px;">🌱 AgriMitra</h1>
+                            <p style="margin:6px 0 0 0; font-size: 13px; opacity: 0.95; letter-spacing: 0.5px;">Sowing Prosperity. Growing Trust.</p>
                         </div>
                         <div class="content">
                             <p>Hello <strong>%s</strong>,</p>
-                            <p>We received a request to reset the password for your ShopEasy account. Use the following One-Time Password (OTP) to complete your verification:</p>
+                            <p>We received a request to reset the password for your AgriMitra account. Use the following One-Time Password (OTP) to complete your verification:</p>
                             <div class="otp-box">%s</div>
-                            <p>This OTP is valid for <strong>10 minutes</strong>. If you did not request a password reset, please ignore this email or contact customer support immediately.</p>
-                            <p>Best regards,<br><strong>The ShopEasy Security Team</strong></p>
+                            <p>This OTP is valid for <strong>10 minutes</strong>. If you did not request a password reset, please ignore this email or contact support immediately.</p>
+                            <p>Best regards,<br><strong>The AgriMitra Team</strong></p>
                         </div>
                         <div class="footer">
-                            &copy; 2026 ShopEasy Inc. All rights reserved.
+                            &copy; 2026 AgriMitra. All rights reserved.
                         </div>
                     </div>
                 </body>

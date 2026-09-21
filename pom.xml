@@ -14,8 +14,8 @@
     <groupId>com.shopeasy</groupId>
     <artifactId>shopeasy-auth-service</artifactId>
     <version>1.0.0</version>
-    <name>shopeasy-auth-service</name>
-    <description>Registration and Login Authentication Service for ShopEasy E-Commerce</description>
+    <name>agrimitra-auth-service</name>
+    <description>Registration and Login Authentication Service for AgriMitra</description>
 
     <properties>
         <java.version>21</java.version>
