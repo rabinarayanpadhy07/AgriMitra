@@ -110,7 +110,7 @@ public class AuthService {
     }
 
     @Transactional
-    public String forgotPassword(ForgotPasswordRequest request) {
+    public void forgotPassword(ForgotPasswordRequest request) {
         String identifier = request.getIdentifier().trim();
         User user = userRepository.findByEmailOrMobileNumber(identifier)
                 .orElseThrow(() -> new ResourceNotFoundException("No registered account found with given email or mobile number"));
@@ -131,9 +131,8 @@ public class AuthService {
 
         otpVerificationRepository.save(otpVerification);
 
-        // Send OTP email
-        boolean emailSent = emailService.sendOtpEmail(user.getEmail(), user.getFullName(), otp);
-        return emailSent ? null : otp;
+        // Send OTP email via SMTP
+        emailService.sendOtpEmail(user.getEmail(), user.getFullName(), otp);
     }
 
     @Transactional(readOnly = true)

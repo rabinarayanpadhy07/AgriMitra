@@ -1,5 +1,6 @@
 package com.shopeasy.auth.service;
 
+import com.shopeasy.auth.exception.ApiException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -21,13 +22,13 @@ public class EmailService {
     @Value("${spring.mail.username:}")
     private String senderEmail;
 
-    public boolean sendOtpEmail(String recipientEmail, String recipientName, String otp) {
-        // Prominently log to console for instant developer verification
+    public void sendOtpEmail(String recipientEmail, String recipientName, String otp) {
+        // Prominently log to console for server logs
         logOtpBanner(recipientEmail, otp);
 
         if (senderEmail == null || senderEmail.trim().isEmpty() || senderEmail.contains("your_email") || senderEmail.equals("${MAIL_USERNAME:}")) {
-            logger.warn("SMTP email not configured (MAIL_USERNAME is empty or placeholder). Console OTP: {}", otp);
-            return false;
+            logger.error("SMTP email not configured (MAIL_USERNAME is empty or placeholder). Cannot dispatch email.");
+            throw new ApiException("Email service is currently not configured on the server. Please check SMTP settings.");
         }
 
         try {
@@ -43,10 +44,9 @@ public class EmailService {
 
             mailSender.send(mimeMessage);
             logger.info("OTP email successfully dispatched to {}", recipientEmail);
-            return true;
         } catch (MessagingException | RuntimeException e) {
-            logger.warn("Could not dispatch email via SMTP (using fallback console display): {}", e.getMessage());
-            return false;
+            logger.error("Could not dispatch email via SMTP: {}", e.getMessage(), e);
+            throw new ApiException("Failed to send OTP email: " + e.getMessage());
         }
     }
 
