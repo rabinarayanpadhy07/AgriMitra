@@ -1,5 +1,8 @@
 package com.shopeasy.auth.dto;
 
+import com.shopeasy.auth.entity.AccountStatus;
+import com.shopeasy.auth.entity.SellerStatus;
+import com.shopeasy.auth.entity.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,6 +20,9 @@ public class UserProfileResponse {
     private String fullName;
     private String email;
     private String mobileNumber;
+    private UserRole role;
+    private AccountStatus accountStatus;
+    private SellerStatus sellerStatus;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

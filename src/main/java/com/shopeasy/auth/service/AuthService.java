@@ -1,6 +1,7 @@
 package com.shopeasy.auth.service;
 
 import com.shopeasy.auth.dto.*;
+import com.shopeasy.auth.entity.AccountStatus;
 import com.shopeasy.auth.entity.OtpVerification;
 import com.shopeasy.auth.entity.User;
 import com.shopeasy.auth.exception.*;
@@ -75,6 +76,10 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidCredentialsException();
+        }
+
+        if (user.getAccountStatus() == AccountStatus.BLOCKED) {
+            throw new AccountBlockedException();
         }
 
         // Generate JWT

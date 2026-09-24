@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -52,5 +53,12 @@ public class UserController {
         }).collect(Collectors.toList());
 
         return ResponseEntity.ok(ApiResponse.success("Active sessions retrieved successfully", response));
+    }
+
+    @PostMapping({"/api/user/seller-application", "/seller-application"})
+    public ResponseEntity<ApiResponse<UserProfileResponse>> applyForSellerStatus(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        UserProfileResponse profile = userService.applyForSellerStatus(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success("Seller application submitted successfully. An admin will review it shortly.", profile));
     }
 }

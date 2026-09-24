@@ -28,7 +28,7 @@ public class UserDetailsImpl implements UserDetails {
                 user.getEmail(),
                 user.getMobileNumber(),
                 user.getPassword(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
         );
     }
 

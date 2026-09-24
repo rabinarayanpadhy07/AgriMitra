@@ -13,6 +13,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -66,6 +67,16 @@ public class SecurityConfig {
                                 "/api/auth/reset-password", "/reset-password",
                                 "/error"
                         ).permitAll()
+                        // Public shop browsing endpoints (read-only)
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/products/**",
+                                "/api/categories/**",
+                                "/api/banners/active",
+                                "/api/crops/**",
+                                "/api/payments/razorpay/config"
+                        ).permitAll()
+                        // Admin-only endpoints
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // Protected endpoints requiring valid JWT & active session
                         .requestMatchers(
                                 "/api/auth/logout", "/logout",
