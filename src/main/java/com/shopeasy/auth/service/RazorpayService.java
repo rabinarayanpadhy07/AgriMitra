@@ -79,9 +79,10 @@ public class RazorpayService {
 
         try {
             razorpayOrderId = callRazorpayCreateOrderApi(amountInPaise, "rcpt_order_" + order.getId());
+            log.info("Successfully created official Razorpay order {} for local order #{}", razorpayOrderId, order.getId());
         } catch (Exception e) {
-            log.warn("Razorpay API order creation failed or running in sandbox/offline mode: {}. Generating test order ID.", e.getMessage());
-            razorpayOrderId = "order_test_" + order.getId() + "_" + System.currentTimeMillis();
+            log.error("Official Razorpay API order creation failed: {}", e.getMessage(), e);
+            throw new ApiException("Failed to initialize Razorpay payment gateway: " + e.getMessage());
         }
 
         payment.setMethod(PaymentMethod.RAZORPAY);
@@ -116,13 +117,9 @@ public class RazorpayService {
 
         boolean isValid = verifySignature(request.getRazorpayOrderId(), request.getRazorpayPaymentId(), request.getRazorpaySignature());
 
-        // In test mode, allow verification of test payments
-        if (!isValid && keyId.startsWith("rzp_test_")) {
-            log.info("Test mode verification accepted for order #{}", order.getId());
-            isValid = true;
-        }
-
         if (!isValid) {
+            log.warn("Razorpay payment signature mismatch for order #{}, rzpOrder={}, rzpPayment={}",
+                    order.getId(), request.getRazorpayOrderId(), request.getRazorpayPaymentId());
             payment.setStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
             throw new ApiException("Payment verification failed: invalid signature");
@@ -198,7 +195,19 @@ public class RazorpayService {
                     return body.substring(idx + 6, end);
                 }
             }
+        } else {
+            StringBuilder errorResponse = new StringBuilder();
+            if (conn.getErrorStream() != null) {
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        errorResponse.append(line.trim());
+                    }
+                }
+            }
+            log.error("Razorpay API error response (HTTP {}): {}", code, errorResponse);
+            throw new RuntimeException("Razorpay API error (" + code + "): " + errorResponse);
         }
-        throw new RuntimeException("Razorpay API returned HTTP " + code);
+        throw new RuntimeException("Razorpay API returned unexpected response format (HTTP " + code + ")");
     }
 }

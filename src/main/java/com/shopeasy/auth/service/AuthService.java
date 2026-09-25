@@ -109,6 +109,7 @@ public class AuthService {
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             String token = authorizationHeader.substring(7);
             sessionService.invalidateSession(token);
+            com.shopeasy.auth.security.JwtAuthenticationFilter.evictToken(token);
             logger.info("User logged out, session invalidated for token");
         }
         SecurityContextHolder.clearContext();

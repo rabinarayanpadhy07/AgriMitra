@@ -19,7 +19,9 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @RequiredArgsConstructor
@@ -31,6 +33,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsServiceImpl userDetailsService;
     private final SessionRepository sessionRepository;
 
+    private static final long CACHE_TTL_MS = 60_000L; // 60 seconds TTL
+
+    private record CachedSession(UserDetails userDetails, long expiresAt) {}
+    private static final Map<String, CachedSession> SESSION_CACHE = new ConcurrentHashMap<>();
+
+    public static void evictToken(String jwt) {
+        if (jwt != null) {
+            SESSION_CACHE.remove(jwt);
+        }
+    }
+
+    public static void clearCache() {
+        SESSION_CACHE.clear();
+    }
+
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
@@ -39,12 +56,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = parseJwt(request);
             if (jwt != null && jwtUtils.validateToken(jwt)) {
-                // Check if session is active in database
-                Optional<Session> sessionOpt = sessionRepository.findFirstByJwtTokenAndIsActiveTrueOrderByIdDesc(jwt);
-                if (sessionOpt.isPresent()) {
-                    String email = jwtUtils.getEmailFromToken(jwt);
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                UserDetails userDetails = null;
+                long now = System.currentTimeMillis();
 
+                // 1. Fast in-memory cache lookup
+                CachedSession cached = SESSION_CACHE.get(jwt);
+                if (cached != null && now < cached.expiresAt()) {
+                    userDetails = cached.userDetails();
+                } else {
+                    // 2. Fall back to database session verification
+                    Optional<Session> sessionOpt = sessionRepository.findFirstByJwtTokenAndIsActiveTrueOrderByIdDesc(jwt);
+                    if (sessionOpt.isPresent()) {
+                        String email = jwtUtils.getEmailFromToken(jwt);
+                        userDetails = userDetailsService.loadUserByUsername(email);
+                        SESSION_CACHE.put(jwt, new CachedSession(userDetails, now + CACHE_TTL_MS));
+                    } else {
+                        SESSION_CACHE.remove(jwt);
+                        logger.warn("Token presented is valid cryptographically, but session has been invalidated/logged out");
+                    }
+                }
+
+                if (userDetails != null) {
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
@@ -54,8 +86,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                } else {
-                    logger.warn("Token presented is valid cryptographically, but session has been invalidated/logged out");
                 }
             }
         } catch (Exception e) {

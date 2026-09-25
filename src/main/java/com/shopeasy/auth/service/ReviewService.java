@@ -86,19 +86,35 @@ public class ReviewService {
     public ReviewResponse approve(Long id) {
         Review review = findById(id);
         review.setStatus(ReviewStatus.APPROVED);
-        return ReviewResponse.from(reviewRepository.save(review));
+        Review saved = reviewRepository.save(review);
+        updateProductRatingStats(review.getProduct());
+        return ReviewResponse.from(saved);
     }
 
     @Transactional
     public ReviewResponse reject(Long id) {
         Review review = findById(id);
         review.setStatus(ReviewStatus.REJECTED);
-        return ReviewResponse.from(reviewRepository.save(review));
+        Review saved = reviewRepository.save(review);
+        updateProductRatingStats(review.getProduct());
+        return ReviewResponse.from(saved);
     }
 
     @Transactional
     public void delete(Long id) {
-        reviewRepository.delete(findById(id));
+        Review review = findById(id);
+        Product product = review.getProduct();
+        reviewRepository.delete(review);
+        updateProductRatingStats(product);
+    }
+
+    private void updateProductRatingStats(Product product) {
+        if (product == null) return;
+        Double avg = reviewRepository.averageRatingForProduct(product);
+        long count = reviewRepository.countApprovedForProduct(product);
+        product.setAverageRating(avg != null ? Math.round(avg * 10.0) / 10.0 : null);
+        product.setReviewCount(count);
+        productRepository.save(product);
     }
 
     private Review findById(Long id) {

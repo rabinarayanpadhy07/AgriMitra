@@ -61,7 +61,7 @@ public class ProductService {
             if (featured != null) predicates.add(cb.equal(root.get("featured"), featured));
             return cb.and(predicates.toArray(new Predicate[0]));
         };
-        Page<ProductResponse> page = productRepository.findAll(spec, pageable).map(this::toResponseWithRating);
+        Page<ProductResponse> page = productRepository.findAll(spec, pageable).map(ProductResponse::from);
         return PageResponse.from(page);
     }
 
@@ -82,13 +82,15 @@ public class ProductService {
             if (active != null) predicates.add(cb.equal(root.get("active"), active));
             return cb.and(predicates.toArray(new Predicate[0]));
         };
-        Page<ProductResponse> page = productRepository.findAll(spec, pageable).map(this::toResponseWithRating);
+        Page<ProductResponse> page = productRepository.findAll(spec, pageable).map(ProductResponse::from);
         return PageResponse.from(page);
     }
 
     @Transactional(readOnly = true)
     public ProductResponse getById(Long id) {
-        return toResponseWithRating(findById(id));
+        Product product = productRepository.findWithDetailsById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+        return toResponseWithRating(product);
     }
 
     @Transactional(readOnly = true)
@@ -204,9 +206,13 @@ public class ProductService {
 
     private ProductResponse toResponseWithRating(Product product) {
         ProductResponse response = ProductResponse.from(product);
-        Double avg = reviewRepository.averageRatingForProduct(product);
-        response.setAverageRating(avg != null ? Math.round(avg * 10.0) / 10.0 : null);
-        response.setReviewCount(reviewRepository.countApprovedForProduct(product));
+        if (response.getAverageRating() == null && (response.getReviewCount() == null || response.getReviewCount() == 0)) {
+            Double avg = reviewRepository.averageRatingForProduct(product);
+            if (avg != null) {
+                response.setAverageRating(Math.round(avg * 10.0) / 10.0);
+                response.setReviewCount(reviewRepository.countApprovedForProduct(product));
+            }
+        }
         return response;
     }
 

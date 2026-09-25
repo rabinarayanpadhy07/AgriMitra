@@ -65,9 +65,18 @@ public class Product {
     @Builder.Default
     private Boolean featured = false;
 
+    @Column(name = "average_rating")
+    @Builder.Default
+    private Double averageRating = null;
+
+    @Column(name = "review_count", nullable = false, columnDefinition = "bigint default 0")
+    @Builder.Default
+    private Long reviewCount = 0L;
+
     @ElementCollection
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
     @Column(name = "image_url", length = 500)
+    @org.hibernate.annotations.BatchSize(size = 50)
     @Builder.Default
     private List<String> imageUrls = new ArrayList<>();
 

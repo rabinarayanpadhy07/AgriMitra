@@ -41,6 +41,9 @@ class AuthIntegrationTests {
     @Autowired
     private OtpVerificationRepository otpVerificationRepository;
 
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.shopeasy.auth.service.EmailService emailService;
+
     @BeforeEach
     void setUp() {
         otpVerificationRepository.deleteAll();

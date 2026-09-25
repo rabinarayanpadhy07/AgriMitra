@@ -4,15 +4,26 @@ import com.shopeasy.auth.entity.Category;
 import com.shopeasy.auth.entity.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
+
+    @Override
+    @EntityGraph(attributePaths = {"category", "seller"})
+    Page<Product> findAll(Specification<Product> spec, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"category", "seller"})
+    Optional<Product> findWithDetailsById(Long id);
+
+    @EntityGraph(attributePaths = {"category", "seller"})
     Optional<Product> findBySlug(String slug);
     boolean existsBySlug(String slug);
     boolean existsBySku(String sku);

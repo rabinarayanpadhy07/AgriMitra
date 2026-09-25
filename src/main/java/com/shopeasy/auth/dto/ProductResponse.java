@@ -83,6 +83,8 @@ public class ProductResponse {
                 .composition(p.getComposition())
                 .manufacturer(p.getManufacturer())
                 .suitableRegion(p.getSuitableRegion())
+                .averageRating(p.getAverageRating())
+                .reviewCount(p.getReviewCount() != null ? p.getReviewCount() : 0L)
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
                 .build();
